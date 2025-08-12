@@ -29,7 +29,6 @@ public static void setFood(Food food) {
 	if (Bacteria.food == null) Bacteria.food = food;
 }
 protected abstract void move() throws Exception;
-// TODO optimize ?!
 public final boolean isReadyForCloning() {
 	if (loopsForCloning == 0 && health > GOOD_HEALTH) {
 		loopsForCloning = REPRODUCTIVE_LOOPS;
@@ -67,7 +66,6 @@ public final int getHealth() {
 public final int getLoopsForCloning() {
 	return this.loopsForCloning;
 }
-// TODO consider make it private
 @Override
 protected Bacteria clone() throws CloneNotSupportedException {
 	Bacteria b = (Bacteria) super.clone();

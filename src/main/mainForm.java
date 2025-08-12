@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 import javax.swing.JPanel;
@@ -19,10 +18,11 @@ private javax.swing.JPanel jPanelResult;
 private javax.swing.JPanel jPanelTerrain;
 // End of variables declaration//GEN-END:variables
 
-private ArrayList<Adversary> contendenti = new ArrayList<>();
+private ArrayList<Adversary> adversaries = new ArrayList<>();
 private ArrayList<javax.swing.JLabel> values = new ArrayList<>();
 private javax.swing.Timer timerUpdateSimulation;
 private int timer_counter = 0;
+private int next_bacteria = 0;
 
 public mainForm() throws Exception {
 	initComponents();
@@ -39,22 +39,19 @@ public mainForm() throws Exception {
 		public void paintComponent(Graphics g) {
 			g.setColor(jPanelTerrain.getBackground());
 			g.fillRect(0, 0, this.getWidth(), this.getHeight());
-			for (var c : contendenti) {
-				g.setColor(c.color);
-				for (int i=0; i<c.entities.size(); i++) {
-					Bacteria b = (Bacteria) c.entities.get(i);
+			for (var a : adversaries) {
+				g.setColor(a.color);
+				for (int i=0; i<a.entities.size(); i++) {
+					Bacteria b = (Bacteria) a.entities.get(i);
 					g.fillRect(b.x, b.y, 3, 3);
 				}
 			}
-			// TODO painting have some bugs
 			g.setColor(Color.GREEN);
-			for (int x = 0; x < food.getHeight(); x++) {
-				int y = food.food[x].nextSetBit(0);
-				while (y != -1) {
-					g.fillRect(y, x, 2, 2);
-					y = food.food[x].nextSetBit(y+1);
-				}
-			}
+			int local_food_height = Food.getHeight();
+			int local_food_width = Food.getWidth();
+			for (int i=0; i<local_food_height; i++)
+				for (int j=0; j<local_food_width; j++)
+					if (Food.isFood(j, i)) g.fillRect(j, i, 2, 2);
 		}
 	});
 
@@ -75,23 +72,25 @@ public mainForm() throws Exception {
 	);
 
 	timerUpdateSimulation = new Timer(50, (ActionEvent e) -> {
-		simulation_cycle();
+		simulation_cycle(next_bacteria);
+		next_bacteria++;
+		if (next_bacteria >= adversaries.size()) next_bacteria = 0;
 		jPanelTerrain.repaint();
 		if (timer_counter++ % 20 != 0) return;
 		food.toggle();
 		// TODO FPS counter
-		for (int i = 0; i < contendenti.size(); i++) {
-			if (contendenti.get(i).entities.isEmpty()) {
-				System.out.println("(" + contendenti.get(i).name + " is dead)");
-				values.get(i).setText(contendenti.get(i).name + " 0");
+		for (int i = 0; i < adversaries.size(); i++) {
+			if (adversaries.get(i).entities.isEmpty()) {
+				System.out.println("(" + adversaries.get(i).name + " is dead)");
+				values.get(i).setText(adversaries.get(i).name + " 0");
 				values.remove(i);
-				contendenti.remove(i);
+				adversaries.remove(i);
 				i--;
 			} else {
 				values.get(i).setText(
-					contendenti.get(i).name + " " + 
-					contendenti.get(i).entities.size() + " " +
-					contendenti.get(i).medium_time
+					adversaries.get(i).name + " " + 
+					adversaries.get(i).entities.size() + " " +
+					adversaries.get(i).medium_time
 				);
 			}
 		}
@@ -120,11 +119,11 @@ private void inizializzaBatteri() throws Exception {
 				name,
 				Class.forName("children." + name)
 			);
-			contendenti.add(c);
+			adversaries.add(c);
 			values.add(new javax.swing.JLabel(
-				name + " " + contendenti.get(i).entities.size()
+				name + " " + adversaries.get(i).entities.size()
 			));
-			values.get(i).setForeground(contendenti.get(i).color);
+			values.get(i).setForeground(adversaries.get(i).color);
 			jPanelResult.add(values.get(i));
 		} catch (Exception e) {
 			System.out.println(e);
@@ -173,20 +172,20 @@ public static void main(String args[]) {
 	}
 }
 
-// TODO improve for cache locality
-private void simulation_cycle() {
-	// shuffle contendenti for fairness
-	var order = new ArrayList<Integer>(contendenti.size());
-	for (int i = 0; i < contendenti.size(); i++) {
-		order.add(i);
-	}
-	Collections.shuffle(order);
+private void simulation_cycle(int next_bacteria) {
+	// shuffle adversaries for fairness
+	// use a pointer over Collections.shuffle() to maintain maximum fairness
 
-	for (var index : order) {
+	int index = next_bacteria;
+	while (true) {
+		index++;
+		if (index >= adversaries.size()) index = 0;
+		if (next_bacteria == 0 && index == adversaries.size()-1) break;
+		else if (index == next_bacteria-1) return;
 		ArrayList<Bacteria> babies = new ArrayList<>();
-		Adversary c = contendenti.get(index);
+		Adversary a = adversaries.get(index);
 		var start = System.nanoTime();
-		for (Iterator<Bacteria> i = c.entities.iterator(); i.hasNext();) {
+		for (Iterator<Bacteria> i = a.entities.iterator(); i.hasNext();) {
 			Bacteria b = i.next();
 			if (! b.run()) {
 				i.remove();
@@ -196,11 +195,12 @@ private void simulation_cycle() {
 				int xp = b.x, yp = b.y;
 				try {
 					Bacteria clone = (Bacteria) b.clone();
+					// TODO translate in english
 					// imporre al figlio le stesse coordinate del padre
 					clone.x = xp; clone.y = yp;
 					babies.add(clone);
 				} catch (Exception e) {
-					System.out.println(c.name + " panics during cloning");
+					System.out.println(a.name + " panics during cloning");
 				}
 				// evitare che il padre si muova durante la fase di
 				// clonazione senza consumare salute
@@ -208,9 +208,10 @@ private void simulation_cycle() {
 			}
 		}
 		var end = System.nanoTime() - start;
-		if (c.entities.isEmpty()) continue;
-		c.medium_time = (c.medium_time + end / c.entities.size())/2;
-		c.entities.addAll(babies); // should improve cache locality
+		if (a.entities.isEmpty()) continue;
+		// reuse previous time to stabilize the output
+		a.medium_time = (a.medium_time + (end / a.entities.size()))/2;
+		a.entities.addAll(babies); // should improve cache locality
 	}
 }
 }

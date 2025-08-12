@@ -28,8 +28,8 @@ public class Adversary<Type> {
 					.getConstructor().newInstance()
 				);
 			} catch (Exception e) {
-				System.out.println("cannot instance new bacteria_type");
-				System.exit(1);
+				System.out.println("cannot instance " + name);
+				return;
 			}
 		}
 	}

@@ -4,7 +4,7 @@ import java.util.BitSet;
 import java.util.Random;
 
 public class Food {
-public static BitSet food[]; // TODO testing only
+private static BitSet food[];
 private static int width;
 private static int height;
 private static Random random = new Random();
@@ -15,6 +15,7 @@ public static enum Distribution {
 	SQUARE, CORNER, RANDOM
 }
 private final Runnable distributionMethod;
+private static int toggle_counter;
 
 public Food(int w, int h, Distribution dt) {
 	width = w;
@@ -27,6 +28,7 @@ public Food(int w, int h, Distribution dt) {
 		case RANDOM -> Food::randomDistribution;
 		default -> Food::squareDistribution;
 	};
+	toggle_counter = 0;
 }
 private static void squareDistribution() {
 	int randx = random.nextInt(width - foodDimension - 1);
@@ -56,6 +58,7 @@ private static void cornerDistribution() {
 }
 public void toggle() {
 	distributionMethod.run();
+	toggle_counter++;
 }
 public static Distribution getDistributionType() {
 	return Food.distributionType;
@@ -66,7 +69,6 @@ public static boolean isFood(int x, int y) {
 	}
 	return food[y].get(x);
 }
-// TODO optimize?
 public boolean eatFood(int x, int y) {
 	if (isFood(x, y)) {
 		food[y].flip(x);
@@ -79,5 +81,8 @@ public static int getWidth() {
 }
 public static int getHeight() {
 	return height;
+}
+public static int getToggleCounter() {
+	return toggle_counter;
 }
 }
