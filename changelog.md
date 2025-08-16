@@ -5,7 +5,8 @@
 The user-space is not affected (functionality wise) except for a couple of obscure functions nobody really ever used
 
 **summary**
-improve readibility and performance using less code lines
+improve readability and performance using less code lines
+update to `JDK 24`
 
 ## global
 
@@ -22,6 +23,7 @@ improve readibility and performance using less code lines
 
 - make use on an array of bitsets insted of a matrix of boolean in order to use much less space ( 87.5% ) and make cache aware algorithms much more efficient
 	old algos gain an important speedup too ( close to 2X )
+- add a (publicly readable) counter that keeps track of the times `toggle()` is being called
 
 ## Batterio.java
 
@@ -36,3 +38,6 @@ improve readibility and performance using less code lines
 	instead, they are tracked in every `simulation_cycle()` to prove the heavy toll that not-compiled languages have on the performance of their executables and the unpredictability of the black magic they use to stay competitive
 - merge some attributes in a custom class ( `Adversary.java` ) to improve legibility
 	instead of inserting and executing one entity per group (bad cache locality), groups are executed one after the other but their execution order is randomixed by a shuffle function to ensure the same level of fairness
+
+# TODOs
+- continua a non essere equo in caso di adversaries divisori di 20, siccome l'ordine viene ripetuto ed i primi saranno sempre primi

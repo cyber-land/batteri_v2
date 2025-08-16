@@ -16,21 +16,16 @@ public class Adversary<Type> {
 	};
 	private static int color_index = 0;
 
-	public Adversary(String n, Type bacteria_type) {
+	public Adversary(String n, Type bacteria_type) throws Exception {
 		name = n;
 		if (color_index == colors.length) color_index = 0;
 		color = colors[color_index++];
 		entities = new LinkedList<>();
 		for (int i=0; i<INITIAL_QUANTITY; i++) {
-			try {
-				entities.add(
-					((Class<Type>) bacteria_type)
-					.getConstructor().newInstance()
-				);
-			} catch (Exception e) {
-				System.out.println("cannot instance " + name);
-				return;
-			}
+			entities.add(
+				((Class<Type>) bacteria_type)
+				.getConstructor().newInstance()
+			);
 		}
 	}
 }

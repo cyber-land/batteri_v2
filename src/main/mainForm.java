@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.stream.Collectors;
 import javax.swing.JPanel;
 import javax.swing.Timer;
@@ -21,7 +20,7 @@ private javax.swing.JPanel jPanelTerrain;
 private ArrayList<Adversary> adversaries = new ArrayList<>();
 private ArrayList<javax.swing.JLabel> values = new ArrayList<>();
 private javax.swing.Timer timerUpdateSimulation;
-private int timer_counter = 0;
+private static int timer_counter = 0;
 private int next_bacteria = 0;
 
 public mainForm() throws Exception {
@@ -111,7 +110,6 @@ private void inizializzaBatteri() throws Exception {
 		System.out.println("Classes found:");
 		for (String name : names) System.out.println("- " + name);
 	}
-
 	for (int i = 0; i < names.size(); i++) {
 		String name = names.get(i);
 		try {
@@ -126,11 +124,9 @@ private void inizializzaBatteri() throws Exception {
 			values.get(i).setForeground(adversaries.get(i).color);
 			jPanelResult.add(values.get(i));
 		} catch (Exception e) {
-			System.out.println(e);
-			System.out.println(name + " panics during constructor hooking");
-			names.remove(i);
+			System.out.println(name + " is not a valid bacteria");
+			names.remove(i--);
 		}
-		
 	}
 }
 
@@ -178,40 +174,44 @@ private void simulation_cycle(int next_bacteria) {
 
 	int index = next_bacteria;
 	while (true) {
-		index++;
 		if (index >= adversaries.size()) index = 0;
-		if (next_bacteria == 0 && index == adversaries.size()-1) break;
-		else if (index == next_bacteria-1) return;
-		ArrayList<Bacteria> babies = new ArrayList<>();
 		Adversary a = adversaries.get(index);
+		ArrayList<Bacteria> babies = new ArrayList<>();
 		var start = System.nanoTime();
-		for (Iterator<Bacteria> i = a.entities.iterator(); i.hasNext();) {
-			Bacteria b = i.next();
+		for (int i=0; i< a.entities.size(); i++) {
+			Bacteria b = (Bacteria) a.entities.get(i);
 			if (! b.run()) {
-				i.remove();
+				a.entities.remove(i--);
 				continue;
 			}
 			if (b.isReadyForCloning()) {
 				int xp = b.x, yp = b.y;
 				try {
 					Bacteria clone = (Bacteria) b.clone();
-					// TODO translate in english
-					// imporre al figlio le stesse coordinate del padre
+					// impose the father's coordinates
 					clone.x = xp; clone.y = yp;
 					babies.add(clone);
 				} catch (Exception e) {
 					System.out.println(a.name + " panics during cloning");
 				}
-				// evitare che il padre si muova durante la fase di
-				// clonazione senza consumare salute
+				// prevent the father from moving during the
+				// cloning phase without consuming health
 				b.x = xp; b.y = yp;
 			}
 		}
 		var end = System.nanoTime() - start;
-		if (a.entities.isEmpty()) continue;
-		// reuse previous time to stabilize the output
-		a.medium_time = (a.medium_time + (end / a.entities.size()))/2;
-		a.entities.addAll(babies); // should improve cache locality
+		if (!a.entities.isEmpty()) {
+			// reuse previous time to stabilize the output
+			a.medium_time = (a.medium_time + (end / a.entities.size()))/2;
+			a.entities.addAll(babies); // should improve cache locality
+		}
+		if (next_bacteria == 0 && index == adversaries.size()-1) break;
+		else if (index == next_bacteria-1) break;
+		index++;
 	}
+}
+
+public static int getTimerCounter() {
+	return mainForm.timer_counter;
 }
 }
